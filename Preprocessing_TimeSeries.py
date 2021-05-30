@@ -70,7 +70,8 @@ df_test=adfuller(price_series)
 print("P-value: "+str(df_test[1])+" is greater than 0.05: reject Ho and conclude that series is non stationary (transformation for series is required)")
 
 """4.1.2.1 Transform orginal series"""
-#First order Difference transform
+#First order Difference log transform
+"""log(1+ri)=log(pi)-log(pj) -----> i: current row / j: previous row"""
 price_series_log=np.log(price_series)-np.log((price_series.shift(1)))
 price_series_log=price_series_log.dropna()
 df_test=adfuller(price_series_log)
@@ -78,12 +79,15 @@ print("P-value: "+str(df_test[1])+" is lower than 0.05: reject Ho and conclude t
 
 sns.lineplot(data=price_series_log)
 
+###seasonal component is observed
 decomposition_series=sm.tsa.seasonal_decompose(price_series_log,model="additive")
 decomposition_series.plot()
 plt.show()
 
 
-"""4.1.3 Split series intoTrain set and test set"""
+"""4.1.3 Split series into Train set and test set"""
+#ratio_test=0.15
+#ratio_train=0.85
 
 y=price_series_log
 Y_Train=y[:int(y.shape[0]*0.85)]
@@ -101,6 +105,7 @@ MA(q): the model uses the dependency between observation and residual error from
 S(P,D,Q)m: are additional set of parameters that describe the seasonal components of the model
 
 """
+
 #perform a auto arima first (to find the best parameters for arima model) 
 #m=7 (daily data) https://alkaline-ml.com/pmdarima/tips_and_tricks.html#period
 #trend="c" (constant)
@@ -186,7 +191,7 @@ decomposition_series.plot()
 plt.show()
 
 
-"""4.1.3 Split series intoTrain set and test set"""
+"""4.2.3 Split series intoTrain set and test set"""
 
 y=ticket_series_log
 Y_Train=y[:int(y.shape[0]*0.85)]
@@ -228,8 +233,8 @@ results.plot_diagnostics()
 
 
 """4.2.5 Prediction and Forecast"""
-predictions_train=results.predict() #estimated output using sarima model
-predictions_test=results.predict(start=Y_Test.index[0],end=Y_Test.index[-1])
+predictions_train=results.predict() #estimated train set using sarima model
+predictions_test=results.predict(start=Y_Test.index[0],end=Y_Test.index[-1])#estimated test set using sarima model
 
 from datetime import timedelta
 forecast_tickets=results.predict(start=Y_Test.index[-1]+timedelta(days=1),end=Y_Test.index[-1]+timedelta(days=43)) #forecast of the following 6 weeks (42 days)
@@ -241,6 +246,7 @@ plt.show()
 
 
 """4.3 Reverse Transform"""
+"""revserse_i=reverse_j*exp(Delta_ij)= -----> i: current row / j: previous row"""
 forecast=pd.concat([forecast_price,forecast_tickets],axis=1)
 forecast=forecast.rename(columns={0:'delta_price',1:'delta_tickets'})
 forecast["Total_tickets"]=np.nan
@@ -273,12 +279,3 @@ forecast.reset_index(inplace=True)
 forecast.to_csv("6_week_forecast.csv",index=False)
 
 
-
-"""Reefrences
-https://stackoverflow.com/questions/47349422/how-to-interpret-adfuller-test-results
-https://towardsdatascience.com/the-complete-guide-to-time-series-analysis-and-forecasting-70d476bfe775
-https://www.analyticsvidhya.com/blog/2020/10/how-to-create-an-arima-model-for-time-series-forecasting-in-python/
-https://stackoverflow.com/questions/30089591/freq-argument-options-in-statsmodels-tsa-ar-and-arma-models
-https://machinelearningmastery.com/make-sample-forecasts-arima-python/
-emulate fill excel https://stackoverflow.com/questions/34855859/is-there-a-way-in-pandas-to-use-previous-row-value-in-dataframe-apply-when-previ
-"""
